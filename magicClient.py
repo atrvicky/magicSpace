@@ -2,6 +2,7 @@
 import paho.mqtt.client as mqtt
 import pygame
 import pyautogui as pgi
+import os
 
 pygame.init()
 # pygame.mouse.set_visible(True)
@@ -12,7 +13,7 @@ pgi.PAUSE = 0.1
 # MQTT cfg
 mqtt_user = "magicSpace"
 mqtt_pass = "magicspace"
-mqtt_topics = ["magicSpaceMouseX", "magicSpaceMouseY", "magicSpaceMouse"]
+mqtt_topics = ["magicSpaceMousePos", "magicSpaceMouse"]
 mqtt_broker_ip = "192.168.0.105"
 
 #active_mouse_pos = pygame.mouse.get_pos()
@@ -26,7 +27,7 @@ client.username_pw_set(mqtt_user, mqtt_pass)
 
 
 def log(msg):
-    if True:
+    if False:
         print(msg)
 
 
@@ -38,7 +39,9 @@ def on_connect(client, userdata, flags, rc):
 
     # Once the client has connected to the broker, to subscribe the topic
     for topic in mqtt_topics:
-        client.subscribe(topic)
+        client.subscribe(topic, qos=0)
+        log('subscribed to ' + topic)
+
     # subscribe.client("magicSpaceMouseX")
     # client.subscribe("magicSpaceMouseX")
 
@@ -51,19 +54,29 @@ def on_message(client, userdata, msg):
     global active_mouse_x
     global active_mouse_y
     global mouse_status
-    log("Topic: " + msg.topic + "\nMessage: " + str(int(msg.payload)))
+    log("Topic: " + msg.topic + "\nMessage: " + str(msg.payload))
 
-    if msg.topic == "magicSpaceMouseX":
-        active_mouse_x = int(msg.payload)
+    if msg.topic == "magicSpaceMousePos":
+        pos = str(msg.payload)
+        active_mouse_x = int(pos.split('$')[0].split("'")[1])
+        active_mouse_y = int(pos.split('$')[1].split("'")[0])
         log("mousing to: " + str(active_mouse_x) + ", " + str(active_mouse_y))
-        pgi.moveTo(active_mouse_x, None, 0.001)
+        #pygame.mouse.set_pos(active_mouse_x, active_mouse_y)
+        pgi.moveTo(active_mouse_x, active_mouse_y, 0.1)
+    elif msg.topic == "magicSpaceMouseX":
+        active_mouse_x = int(msg.payload)
+        #log("mousing to: " + str(active_mouse_x) + ", " + str(active_mouse_y))
+        #pgi.moveTo(active_mouse_x, active_mouse_y, 0.1)
         #pygame.mouse.set_pos(active_mouse_x, active_mouse_y)
     elif msg.topic == "magicSpaceMouseY":
         active_mouse_y = int(msg.payload)
-        log("mousing to: " + str(active_mouse_x) + ", " + str(active_mouse_y))
-        pgi.moveTo(None, active_mouse_y, 0.001)
+        #pgi.moveTo(active_mouse_x, active_mouse_y, 0.1)
         #pygame.mouse.set_pos(active_mouse_x, active_mouse_y)
-    elif msg.topic == "magicSpaceMouse":
+    # log("mousing to: " + str(active_mouse_x) + ", " + str(active_mouse_y))
+    # mouseCmd = 'nircmd.exe setcursor ' + str(active_mouse_x) + ' ' + str(active_mouse_y)
+    # os.system(mouseCmd)
+
+    if msg.topic == "magicSpaceMouse":
         mouse_status = int(msg.payload)
         if mouse_status == 1:
             log("clicking mouse @: " + str(active_mouse_x) +
